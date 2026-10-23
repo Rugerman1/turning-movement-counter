@@ -1,0 +1,76 @@
+name: Build Windows app
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Create a release with this tag (for example v0.1.0); leave blank for a plain build"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+env:
+  # CPU-only PyTorch keeps the download about a tenth the size of the CUDA build.
+  TORCH_INDEX: https://download.pytorch.org/whl/cpu
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install torch torchvision --index-url $env:TORCH_INDEX
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+
+  build:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install torch torchvision --index-url $env:TORCH_INDEX
+      - run: pip install -r requirements.txt
+      - name: Download the YOLO26 nano weights to bundle
+        run: python -c "import os; os.makedirs('models', exist_ok=True); from ultralytics.utils.downloads import attempt_download_asset as d; print(d('models/yolo26n.pt'))"
+      - name: Build
+        run: pyinstaller packaging/turning_movement_counter.spec --noconfirm --distpath dist
+      - name: Self-test the exe (window, demo count, loads YOLO and runs the tracker)
+        shell: pwsh
+        run: |
+          foreach ($i in 1..2) {
+            $p = Start-Process -FilePath dist\TurningMovementCounter\TurningMovementCounter.exe -ArgumentList "--selftest" -PassThru -Wait
+            if ($p.ExitCode -ne 0) {
+              Get-Content "$env:TEMP\tmc-selftest.log" -ErrorAction SilentlyContinue
+              throw "TurningMovementCounter.exe --selftest run $i failed with exit code $($p.ExitCode)"
+            }
+          }
+      - name: Zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\TurningMovementCounter -DestinationPath dist\TurningMovementCounter-windows.zip
+          "{0:N0} MB zipped" -f ((Get-Item dist\TurningMovementCounter-windows.zip).Length / 1MB)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TurningMovementCounter-windows
+          path: dist/TurningMovementCounter-windows.zip
+          compression-level: 0
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.release_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
+          files: dist/TurningMovementCounter-windows.zip
+          generate_release_notes: true
