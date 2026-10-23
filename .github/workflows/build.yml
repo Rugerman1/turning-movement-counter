@@ -47,6 +47,9 @@ jobs:
         run: python -c "import os; os.makedirs('models', exist_ok=True); from ultralytics.utils.downloads import attempt_download_asset as d; print(d('models/yolo26n.pt'))"
       - name: Build
         run: pyinstaller packaging/turning_movement_counter.spec --noconfirm --distpath dist
+      - name: Show bundled torchvision files
+        shell: pwsh
+        run: Get-ChildItem dist\TurningMovementCounter\_internal\torchvision -File | Select-Object Name, Length
       - name: Self-test the exe (window, demo count, loads YOLO and runs the tracker)
         shell: pwsh
         run: |

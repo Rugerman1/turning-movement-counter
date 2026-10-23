@@ -582,7 +582,9 @@ def selftest() -> int:
 def main():
     if "--selftest" in sys.argv:
         try:
-            sys.exit(selftest())
+            code = selftest()
+            sys.stdout.flush()
+            os._exit(code)  # skip Qt teardown, which can fault on Windows and turn a pass into a crash
         except Exception:  # noqa: BLE001
             # The windowed exe has no console, so leave the traceback where CI can print it.
             import tempfile
@@ -590,7 +592,7 @@ def main():
             with open(os.path.join(tempfile.gettempdir(), "tmc-selftest.log"), "w", encoding="utf-8") as fh:
                 fh.write(traceback.format_exc())
             traceback.print_exc()
-            sys.exit(1)
+            os._exit(1)
     app = QApplication.instance() or QApplication(sys.argv)
     win = MainWindow()
     win.show()
