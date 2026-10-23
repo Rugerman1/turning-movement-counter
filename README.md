@@ -10,7 +10,7 @@ Open a traffic camera or phone video of an intersection, draw one zone over each
 
 ## Download
 
-Grab `TurningMovementCounter-windows.zip` from the latest [release](../../releases/latest), unzip it anywhere, and run `TurningMovementCounter.exe` inside the folder. No install and no Python needed. Windows SmartScreen may warn because the exe is unsigned; choose "More info" then "Run anyway".
+Grab `TurningMovementCounter-windows.zip` (about 340 MB, most of it PyTorch) from the latest [release](../../releases/latest), unzip it anywhere, and run `TurningMovementCounter.exe` inside the folder. No install and no Python needed. Windows SmartScreen may warn because the exe is unsigned; choose "More info" then "Run anyway".
 
 The YOLO26 nano model is bundled, so counting works offline. The larger models in the Detector list download once (from the Ultralytics GitHub releases) the first time you pick them and are kept in `%APPDATA%\TurningMovementCounter\models`. It runs on a laptop CPU (CPU-only PyTorch keeps the download small); at the default 10 analyzed frames per second expect very roughly real time or slower on a laptop, depending on the CPU and video resolution.
 
